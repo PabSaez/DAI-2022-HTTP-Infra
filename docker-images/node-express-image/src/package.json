@@ -7,5 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Hugo Ducommun",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "chance": "^1.1.9",
+    "express": "^4.18.2"
+  }
 }
