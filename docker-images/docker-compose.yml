@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  static:
+    image: hugoducom/httpd-static
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+  dynamic:
+    image: hugoducom/node-invoices
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
