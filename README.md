@@ -1,4 +1,21 @@
 # DAI-2022-HTTP-Infra
+## Step 1 : Serveur web statique
+
+Cette partie met en service un serveur web statique avec apache httpd.
+Pour illustrer cela, nous avons utilisé le template Bootstrap "KnightOne".
+
+### Dockerfile
+```
+FROM php:7.2-apache          # Spécifie l'image qu'on utilise ainsi que la version
+
+COPY content/ /var/www/html/ # Copie le contenu du dossier content dans le dossier html du serveur web
+```
+
+### Apache config
+
+La configuration apache se trouve dans le dossier `apache2` qui est accessible dans le container.
+Pour y accéder il faut se connecter au container avec la commande `docker exec -it <container_name> bash` 
+et ensuite aller dans le dossier `/etc/apache2`.
 
 ## Step 2 : Serveur web dynamique
 
