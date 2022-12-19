@@ -8,6 +8,8 @@ Pour illustrer cela, nous avons utilisé le template Bootstrap "KnightOne".
 ```
 FROM php:7.2-apache          # Spécifie l'image qu'on utilise ainsi que la version
 
+EXPOSE 8081
+
 COPY content/ /var/www/html/ # Copie le contenu du dossier content dans le dossier html du serveur web
 ```
 
@@ -36,9 +38,9 @@ docker build -t hugoducom/node-invoices .
 
 Lancez l'instance de l'application :
 ```bash
-docker run -p 80:3000 hugoducom/node-invoices
+docker run -p 8082:8082 hugoducom/node-invoices
 ```
-_Ici le port 80 en local a été choisi, il peut être changé. En revanche, ne pas changer le port 3000 du container._
+_Ici le port 8082 en local a été choisi, il peut être changé. En revanche, ne pas changer le port 8082 du container._
 
 En faisait une requête GET sur `localhost` on obtient une liste de factures générées aléatoirement (cf. [exemple](docker-images/node-express-image/response_example.json)):
 
@@ -81,3 +83,36 @@ En faisait une requête GET sur `localhost` on obtient une liste de factures gé
   }
 ]
 ```
+
+## Step 3a : Docker compose
+
+TODO
+
+## Step 3b : Traefik reverse proxy
+
+Il nous faut désormais configurer un reverse proxy à l'aide de Traefik.
+
+Ce dernier va permettre de configurer les routes par lequelles seront accessibles les 2 services (static et dynamic).
+
+Pour installer Traefik, il faut simplement suivre le [quick start](https://doc.traefik.io/traefik/getting-started/quick-start/) et modifier notre [docker-compose](./docker-images/docker-compose.yml).
+
+Pour rajouter les routes, il faut utiliser l'option `labels` avec une [rule de Traefik](https://doc.traefik.io/traefik/routing/providers/docker/#routers) dans chaque service :
+
+```yml
+# static service
+depends_on:
+  - reverse_proxy
+labels:
+  - "traefik.http.routers.static.rule=Host(`localhost`)"
+# dynamic service
+depends_on:
+  - reverse_proxy
+labels:
+  - "traefik.http.routers.dynamic.rule=(Host(`localhost`) && PathPrefix(`/api`))"
+```
+
+_Note : `reverse_proxy` est le nom du service de Traefik._
+
+Grâce à ces quelques lignes dans le docker-compose, on peut accéder aux 2 services via les routes suivantes :
+- Static : `localhost`
+- Dynamic : `localhost/api`

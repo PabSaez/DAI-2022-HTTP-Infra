@@ -3,9 +3,9 @@ var chance = new Chance()
 
 var express = require('express');
 var app = express();
-var LISTEN_PORT = 3000
+var LISTEN_PORT = 80
 
-app.get('/', function(req, res) {
+app.get('/api', function(req, res) {
     res.send(generateInvoices());
 })
 

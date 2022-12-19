@@ -1,12 +1,28 @@
-version: "3.9"
+version: "3"
 services:
+  reverse_proxy:
+    image: traefik:v2.9
+    command: --api.insecure=true --providers.docker
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
   static:
     image: hugoducom/httpd-static
     restart: unless-stopped
     ports:
-      - "3001:80"
+      - "8081:80"
+    depends_on:
+      - reverse_proxy
+    labels:
+      - "traefik.http.routers.static.rule=Host(`localhost`)"
   dynamic:
     image: hugoducom/node-invoices
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "8082:80"
+    depends_on:
+      - reverse_proxy
+    labels:
+      - "traefik.http.routers.dynamic.rule=(Host(`localhost`) && PathPrefix(`/api`))"
