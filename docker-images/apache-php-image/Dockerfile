@@ -1,5 +1,5 @@
 FROM php:7.2-apache
 
-EXPOSE 8081
+EXPOSE 80
 
 COPY content/ /var/www/html/
