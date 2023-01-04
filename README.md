@@ -27,7 +27,8 @@ La configuration apache se trouve dans le dossier `apache2` qui est accessible d
 Pour y accéder il faut se connecter au container avec la commande `docker exec -it <container_name> bash` 
 et ensuite aller dans le dossier `/etc/apache2`.
 
-Ainsi, on peut créer des fichiers de configuration localement et rajouter une ligne `COPY` dans `/etc/apache2` dans le Dockerfile pour changer la configuration du serveur.
+Etant donné que nous utilisons la configuration par défaut, nous n'avons pas créer de fichier de configuration localement qui serait copié dans le container.
+Mais on aurait pu créer des fichiers de configuration localement et rajouter une ligne `COPY` dans `/etc/apache2` dans le Dockerfile pour changer la configuration du serveur si besoin.
 
 ## Step 2 : Serveur web dynamique
 
@@ -157,7 +158,7 @@ labels:
 
 _Note : `reverse_proxy` est le nom du service de Traefik._
 
-Afin de construire nos 2 containers automatiquement, un script shell est disponible [build-images.sh](/docker-images/build-images.sh), à lancer avec de run `docker-compose up`.
+Afin de construire nos 2 containers automatiquement, un script shell est disponible [build-images.sh](/docker-images/build-images.sh), à lancer avant de run `docker-compose up`.
 
 Grâce à ces quelques lignes dans le docker-compose, on peut accéder aux 2 services via les routes suivantes :
 - Static : `localhost`
@@ -193,3 +194,35 @@ Pour tester tout cela, après le docker compose up, on peut check les logs du se
 ![Image des scales de containers](figures/docker-scale-images.png)
 
 On remarque que plusieurs IP sont appelées (donc plusieurs instances). On peut mettre émettre l'hypothèse que c'est du round-robin étant donné que les IP sont appelées dans le même ordre.
+
+## Step 4 : AJAX requests with jQuery
+
+Le but de cette étape est de rajouter des requêtes AJAX à notre service statique en modifiant le DOM de la page avec des données dynamiques provenant de notre service API.
+
+Pour cela, nous allons utiliser l'API fetch de JavaScript. Il faut simplement rajouter un script (ici [fetch.js](docker-images/apache-php-image/content/fetch.js)) et le rajouter dans la page HTML de notre page statique : 
+
+```javascript
+function fetchOnePayment() {
+    fetch("/api/").then(res => {
+        return res.json();
+    }).then(payment => {
+        if (payment.length > 0)
+            return payment[0].firstName + " " + payment[0].lastName + " card number : " + payment[0].cardNumber;
+        else
+            return "Personne ne doit payer aujourd'hui !"
+    }).then(paymentToDisplay =>  {
+        document.getElementsByClassName("payment")[0].textContent = paymentToDisplay;
+    });
+}
+
+fetchOnePayment();
+setInterval(fetchOnePayment, 2000);
+```
+
+Ainsi, dans notre page statique, toutes les 2 sec, le numéro de carte d'un client sera affiché ! (Attention, ceci n'est pas à faire dans un cas réel :D).
+
+Voici le rendu final avec les requêtes Fetch sur la droite :
+
+![AJAX requests](figures/ajax-requests.png)
+
+

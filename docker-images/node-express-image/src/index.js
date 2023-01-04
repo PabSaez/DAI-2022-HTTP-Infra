@@ -18,7 +18,6 @@ function generateInvoices() {
         min: 1,
         max: 10
     });
-    console.log(numberOfInvoices);
     var invoices = [];
     for (var i = 0; i < numberOfInvoices; i++) {
         var clientFirstName = chance.first();
@@ -39,7 +38,6 @@ function generateProducts() {
         min: 1,
         max: 3
     });
-    console.log(numberOfProducts);
     var products = [];
     for (var i = 0; i < numberOfProducts; i++) {
         var prodId = chance.ssn();
