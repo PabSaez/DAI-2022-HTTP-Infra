@@ -164,6 +164,10 @@ Grâce à ces quelques lignes dans le docker-compose, on peut accéder aux 2 ser
 - Static : `localhost`
 - Dynamic : `localhost/api`
 
+Voici un petit schéma récapitulatif de notre infrastructure :
+
+![Docker infrastructure](figures/docker-infrastructure.jpg)
+
 ## Step 3c : Dynamic cluster management
 
 Afin de créer plusieurs instances pour nos services, il faut modifier les ports des services dans le docker-compose et rajouter `--accesslog=true` à Traefik :
@@ -201,7 +205,13 @@ Le but de cette étape est de rajouter des requêtes AJAX à notre service stati
 
 Pour cela, nous allons utiliser l'API fetch de JavaScript. Il faut simplement rajouter un script (ici [fetch.js](docker-images/apache-php-image/content/fetch.js)) et le rajouter dans la page HTML de notre page statique : 
 
+```html
+<!-- index.html -->
+<script src="fetch.js"></script>
+```
+
 ```javascript
+// fetch.js
 function fetchOnePayment() {
     fetch("/api/").then(res => {
         return res.json();
@@ -216,7 +226,7 @@ function fetchOnePayment() {
 }
 
 fetchOnePayment();
-setInterval(fetchOnePayment, 2000);
+setInterval(fetchOnePayment, 2000); // Refraichit toutes les 2 sec
 ```
 
 Ainsi, dans notre page statique, toutes les 2 sec, le numéro de carte d'un client sera affiché ! (Attention, ceci n'est pas à faire dans un cas réel :D).
@@ -225,4 +235,65 @@ Voici le rendu final avec les requêtes Fetch sur la droite :
 
 ![AJAX requests](figures/ajax-requests.png)
 
+## Step 5 : Sticky sessions
 
+Le but ici va être de créer des `sticky sessions` pour notre service web statique. C'est à dire qu'on part du principe que notre service est stateful est qu'une même session doit se connecter à une seule machine pendant toute la durée de la session.
+
+Pour cela, il faut simplement modifier les labels de notre service dans le docker-compose :
+
+```
+# static service
+labels:
+  - "traefik.http.routers.static.rule=Host(`localhost`)"
+  - "traefik.http.services.static.loadbalancer.sticky=true"
+  - "traefik.http.services.static.loadbalancer.sticky.cookie.name=StickyCookieStatic"
+  - "traefik.http.services.static.loadbalancer.sticky.cookie.secure=true"
+```
+
+Ainsi, un cookie nommé "StickyCookieStatic" sera généré pour la session en cours, ce qui permettra à Traefik de rediriger la requête vers la même machine à chaque fois :
+
+![Sticky cookie](figures/sticky-cookie-static.png)
+
+On peut vérifier que cela fonctionne en analysant les logs de Traefik après plusieurs rafraîchissements comme dans l'étape 3c avec plusieurs instances (pour plus de lisibilités, les accès aux assets etc. ont été retirés):
+
+```
+172.26.0.1 - - [04/Jan/2023:13:08:33 +0000] "GET / HTTP/1.1" 200 5371 "-" "-" 1 "static@docker" "http://172.26.0.8:80" 3ms
+172.26.0.1 - - [04/Jan/2023:13:08:45 +0000] "GET / HTTP/1.1" 200 5371 "-" "-" 46 "static@docker" "http://172.26.0.8:80" 10ms
+172.26.0.1 - - [04/Jan/2023:13:08:56 +0000] "GET / HTTP/1.1" 200 5371 "-" "-" 55 "static@docker" "http://172.26.0.8:80" 1ms
+```
+
+Pour ce qui est du service dynamique, il reste en round-robin :
+
+```
+172.26.0.1 - - [04/Jan/2023:13:09:53 +0000] "GET /api/ HTTP/1.1" 200 1332 "-" "-" 130 "dynamic@docker" "http://172.26.0.3:8082" 3ms
+172.26.0.1 - - [04/Jan/2023:13:09:55 +0000] "GET /api/ HTTP/1.1" 200 746 "-" "-" 131 "dynamic@docker" "http://172.26.0.4:8082" 3ms
+172.26.0.1 - - [04/Jan/2023:13:09:57 +0000] "GET /api/ HTTP/1.1" 200 994 "-" "-" 132 "dynamic@docker" "http://172.26.0.5:8082" 2ms
+```
+
+## Step 6 : Management UI
+
+Le but de cette étape est d'implémenter un service qui permettra à un administrateur de modifier, supprimer ou organiser les containers et services de l'infrastructure de manière visuelle.
+
+Une des solutions les plus connues et les plus pratiques est (portainer)[www.portainer.io].
+
+Pour cela, il faut simplement rajouter un service dans notre `docker-compose.yml` (facilement trouvable sur internet):
+
+```
+portainer:
+  image: portainer/portainer-ce:latest
+  container_name: portainer
+  restart: unless-stopped
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+  ports:
+    - 9000:9000
+```
+
+Ainsi, le service portainer sera accessible depuis `localhost:9000` :
+
+![Portainer](figures/portainer.png)
+
+Un mot de passe administrateur doit être fourni pour y accéder, attention c'est depuis là qu'on peut supprimer les containers ou les modifier.
+
+Portainer est assez sécurisé avec une authentification, on pourrait encore aller plus loin en rajoutant des middlewares via les labels de traefik si on le souhaitait.

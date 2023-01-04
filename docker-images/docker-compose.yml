@@ -17,6 +17,9 @@ services:
       - reverse_proxy
     labels:
       - "traefik.http.routers.static.rule=Host(`localhost`)"
+      - "traefik.http.services.static.loadbalancer.sticky=true"
+      - "traefik.http.services.static.loadbalancer.sticky.cookie.name=StickyCookieStatic"
+      - "traefik.http.services.static.loadbalancer.sticky.cookie.secure=true"
   dynamic:
     image: hugoducom/node-invoices
     restart: unless-stopped
@@ -26,3 +29,12 @@ services:
       - reverse_proxy
     labels:
       - "traefik.http.routers.dynamic.rule=(Host(`localhost`) && PathPrefix(`/api`))"
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 9000:9000
